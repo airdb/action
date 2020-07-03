@@ -17,7 +17,6 @@ package main
 
 import "github.com/airdb/github/cmd"
 
-
 func main() {
 	cmd.Execute()
 }

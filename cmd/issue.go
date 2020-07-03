@@ -16,27 +16,33 @@ limitations under the License.
 package cmd
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"os"
 
+	"github.com/google/go-github/v32/github"
 	"github.com/spf13/cobra"
+	"golang.org/x/oauth2"
 )
 
 // issueCmd represents the issue command
 var issueCmd = &cobra.Command{
 	Use:   "issue",
-	Short: "A brief description of your command",
-	Long: `A longer description that spans multiple lines and likely contains examples
-and usage of using your command. For example:
-
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
+	Short: "github action issue and issue_comment operation",
+	Long:  ``,
 	Run: func(cmd *cobra.Command, args []string) {
 		githubEventPath := os.Getenv("GITHUB_EVENT_PATH")
 		githubEventName := os.Getenv("GITHUB_EVENT_NAME")
+		githubToken := os.Getenv("GITHUB_TOKEN")
+
+		fmt.Println(githubToken)
+
+		if githubEventPath == "" {
+			fmt.Println("GITHUB_EVENT_PATH is null.")
+			return
+		}
 
 		var ghIssueComment GithubIssueComment
 
@@ -50,6 +56,13 @@ to quickly create a Cobra application.`,
 			panic(err)
 		}
 
+		SetIssueLabel(githubToken,
+			ghIssueComment.Repository.Owner.Login,
+			ghIssueComment.Repository.Name,
+			ghIssueComment.Issue.ID,
+			ghIssueComment.Comment.Body,
+		)
+
 		fmt.Printf("event: %s, file: %s\n", githubEventName, githubEventPath)
 		fmt.Printf("action: %s, issue title: %s, issue body: %s, issue user: %s\n",
 			ghIssueComment.Action,
@@ -61,7 +74,7 @@ to quickly create a Cobra application.`,
 		fmt.Printf("comment user: %s, comment body: %s\n",
 			ghIssueComment.Comment.User.Login,
 			ghIssueComment.Comment.Body,
-			)
+		)
 	},
 }
 
@@ -77,7 +90,6 @@ func issueCmdInit() {
 	// is called directly, e.g.:
 	// issueCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 }
-
 
 type GithubIssueComment struct {
 	Action  string `json:"action"`
@@ -124,7 +136,7 @@ type GithubIssueComment struct {
 		CreatedAt         string        `json:"created_at"`
 		EventsURL         string        `json:"events_url"`
 		HTMLURL           string        `json:"html_url"`
-		ID                int64         `json:"id"`
+		ID                int           `json:"id"`
 		Labels            []interface{} `json:"labels"`
 		LabelsURL         string        `json:"labels_url"`
 		Locked            bool          `json:"locked"`
@@ -291,4 +303,16 @@ type GithubIssueComment struct {
 		Type              string `json:"type"`
 		URL               string `json:"url"`
 	} `json:"sender"`
+}
+
+func SetIssueLabel(accessToken, owner, repo string, issueNumber int, label string) {
+	ctx := context.Background()
+	ts := oauth2.StaticTokenSource(
+		&oauth2.Token{AccessToken: accessToken},
+	)
+	tc := oauth2.NewClient(ctx, ts)
+
+	client := github.NewClient(tc)
+	labels, resp, err := client.Issues.AddLabelsToIssue(ctx, owner, repo, issueNumber, []string{label})
+	fmt.Println("resp", labels, resp, err)
 }
