@@ -37,8 +37,6 @@ var issueCmd = &cobra.Command{
 		githubEventName := os.Getenv("GITHUB_EVENT_NAME")
 		githubToken := os.Getenv("GITHUB_TOKEN")
 
-		fmt.Println(githubToken)
-
 		if githubEventPath == "" {
 			fmt.Println("GITHUB_EVENT_PATH is null.")
 			return
